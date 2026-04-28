@@ -62,7 +62,7 @@ public class FilterManager : MonoBehaviour
             ApplyTint();
         }
 
-        print(isRed);
+        //print(isRed);
     }
 
     protected virtual void ApplyTint()
