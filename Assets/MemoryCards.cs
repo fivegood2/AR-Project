@@ -84,8 +84,7 @@ public class MemoryCards : MonoBehaviour
         {
             return;
         }
-
-        if (memoryGame != null)
+        else if (memoryGame != null)
         {
             memoryGame.CardSelected(this);
         }
@@ -125,6 +124,25 @@ public class MemoryCards : MonoBehaviour
     {
         isMatched = true;
         faceUp = true;
+
+        if (memoryGame != null)
+        {
+            memoryGame.cardsList.Remove(this);
+        }
+    }
+
+    public void ifNotMatchedFlipDown()
+    {
+        foreach (MemoryCards card in memoryGame.cardsList)
+        {
+            if (card.myID == myID)
+            {
+                card.FlipDown();
+                FlipDown();
+                isMatched = false;
+                return;
+            }
+        }
     }
     //leave face up once matched
 }
