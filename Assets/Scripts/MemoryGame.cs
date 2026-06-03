@@ -1,35 +1,72 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement;
 using UnityEngine;
 
 public class MemoryGame : MonoBehaviour
 {
+    private bool _gameReady = false;
     //private bool firstCardFlipped = false;
     public List<MemoryCards> cardsList = new List<MemoryCards>();
-public List<MemoryCards> matchedCards = new List<MemoryCards>();
+    public List<MemoryCards> matchedCards = new List<MemoryCards>();
 
-private bool checkingCards = false;
-private bool firstFlipDone = false;
-private int totalMatchedCards = 0;
+    private bool checkingCards = false;
+    private bool firstFlipDone = false;
+    private int totalMatchedCards = 0;
 
-public float delayTime;
-    //if first card flip and store it
-    //else flip second card, wait 1 second, check match
+    public int delayTime = 10;
+    [SerializeField] private MemoryGameUI _gameUI;
+    [SerializeField] private EnvironmentPanelPlacement _panelPlacement;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip bubblePopSound;
+    [SerializeField] private AudioClip cardsMatchedSound;
+    [SerializeField] private AudioClip countdownSound;
+    [SerializeField] private AudioClip puzzleWinSound;
+
+    private int _initialCardCount;
 
     void Start()
     {
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
+
+        _initialCardCount = cardsList.Count;
+
         foreach (MemoryCards card in cardsList)
         {
             card.GetMemoryScript(this);
         }
 
+        if (_gameUI != null)
+        {
+            _gameUI.SetText("Please click the bar above the set of cards. Use it to drag the cards onto a wall near you.");
+        }
+
+        // Wait for wall snap instead of starting immediately
+        _panelPlacement.OnFirstWallSnap += HandleFirstWallSnap;
+    }
+
+    private void PlaySound(AudioClip clip)
+    {
+        if (audioSource != null && clip != null)
+        {
+            audioSource.PlayOneShot(clip);
+        }
+    }
+
+    private void HandleFirstWallSnap()
+    {
+        _panelPlacement.OnFirstWallSnap -= HandleFirstWallSnap; // unsubscribe — one-shot
+        PlaySound(bubblePopSound); // Play bubble pop when snapped
         StartCoroutine(InitialDelay());
     }
 
     public void CardSelected(MemoryCards selectedCard)
     {
-        if (checkingCards || selectedCard == null)
+        if (!_gameReady || checkingCards || selectedCard == null)
         {
             return;
         }
@@ -45,7 +82,23 @@ public float delayTime;
 
     private IEnumerator InitialDelay()
     {
-        yield return new WaitForSeconds(delayTime);
+        int countdown = delayTime;
+        while (countdown > 0)
+        {
+            if (_gameUI != null)
+            {
+                _gameUI.SetText("Well done! Beginning game in " + countdown);
+            }
+            PlaySound(countdownSound);
+            yield return new WaitForSeconds(1f);
+            countdown--;
+        }
+        
+        if (_gameUI != null)
+        {
+            _gameUI.SetText(""); // Clear text or hide UI
+        }
+        
         yield return StartCoroutine(StartingFlip());
     }
     
@@ -64,13 +117,14 @@ public float delayTime;
         }
 
         firstFlipDone = true;
+        _gameReady = true; // only now can players interact
     }
 
     private IEnumerator CheckSelectedCards()
     {
         checkingCards = true;
         
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(2f);
 
         //declare these to shorten things so i dont get confused
         MemoryCards firstCard = matchedCards[0];
@@ -81,11 +135,14 @@ public float delayTime;
             firstCard.Match();
             secondCard.Match();
 
+            PlaySound(cardsMatchedSound);
+
             totalMatchedCards += 2;
 
-            if (totalMatchedCards >= cardsList.Count)
+            if (totalMatchedCards >= _initialCardCount)
             {
-                Debug.Log("all carsd matched");
+                Debug.Log("all cards matched");
+                StartCoroutine(WinRoutine());
             }
         }
         else
@@ -97,6 +154,12 @@ public float delayTime;
         matchedCards.Clear();
         checkingCards = false;
     }
-    
+
+    private IEnumerator WinRoutine()
+    {
+        yield return new WaitForSeconds(1f);
+        PlaySound(puzzleWinSound);
+    }
+
     
 }

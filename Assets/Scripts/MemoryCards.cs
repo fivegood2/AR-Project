@@ -86,8 +86,22 @@ public class MemoryCards : MonoBehaviour
         }
         else if (memoryGame != null)
         {
+            TriggerHaptic();
             memoryGame.CardSelected(this);
         }
+    }
+
+    private void TriggerHaptic()
+    {
+        // Simple haptic buzz for VR controllers
+        StartCoroutine(HapticRoutine(0.1f, 0.1f, 0.1f));
+    }
+
+    private System.Collections.IEnumerator HapticRoutine(float duration, float frequency, float amplitude)
+    {
+        OVRInput.SetControllerVibration(frequency, amplitude, OVRInput.Controller.Active);
+        yield return new WaitForSeconds(duration);
+        OVRInput.SetControllerVibration(0, 0, OVRInput.Controller.Active);
     }
 
     public void FlipUp()

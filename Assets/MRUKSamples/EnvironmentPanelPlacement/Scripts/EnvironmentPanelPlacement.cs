@@ -1,5 +1,5 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
+using System;
 using Meta.XR.MRUtilityKit;
 using Meta.XR.Samples;
 using System.Collections;
@@ -38,11 +38,15 @@ namespace Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement
         private float _distanceFromController;
         private Pose? _environmentPose;
         private EnvironmentRaycastHitStatus _currentEnvHitStatus;
-        private OVRCameraRig _cameraRig;
+        //private OVRCameraRig _cameraRig;
+        
+        public event Action OnFirstWallSnap;
+        private bool _hasSnappedToWall = false;
+
 
         private void Awake()
         {
-            _cameraRig = Object.FindAnyObjectByType<OVRCameraRig>();
+           // _cameraRig = Object.FindAnyObjectByType<OVRCameraRig>();
         }
 
         private IEnumerator Start()
@@ -150,6 +154,12 @@ namespace Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement
             // If environment pose is available and the panel is closer to it than to the user, place the panel onto environment to create a magnetism effect
             bool chooseEnvPose = _environmentPose.HasValue && Vector3.Distance(manualPlacementPose.position, _environmentPose.Value.position) / Vector3.Distance(manualPlacementPose.position, _centerEyeAnchor.position) < 0.5;
             _targetPose = chooseEnvPose ? _environmentPose.Value : manualPlacementPose;
+
+            if (chooseEnvPose && !_hasSnappedToWall)
+            {
+                _hasSnappedToWall = true;
+                OnFirstWallSnap?.Invoke();
+            }
         }
 
         private Pose? TryGetEnvironmentPose()

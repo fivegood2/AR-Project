@@ -11,6 +11,12 @@ public class FilterManager : MonoBehaviour
     public Renderer blueOnlyRenderer;
     public Renderer redOnlyRenderer;
     
+    
+    [Header("Cube Reset")]
+    public Transform userTransform;
+    public Transform[] cubesToReset;
+    public float resetRadius = 2f;
+    
     [Header("Cube Gameobjects to spawn")]
     public GameObject blueOnlyCube;
     public GameObject redOnlyCube;
@@ -148,13 +154,30 @@ public class FilterManager : MonoBehaviour
         }
     }
 
-    private void resetCubes()
+    public void resetCubes()
     {
-        //reset their locations to 3 random coordinates near user
-        //reset variables 
-        hasTriedRedFilter = false;
-        hasTriedBlueFilter = false;
-        interactionManager.RightCubeSelected = false;
-        print(interactionManager.RightCubeSelected);
+        if (userTransform == null || cubesToReset == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < cubesToReset.Length; i++)
+        {
+            if (cubesToReset[i] == null)
+            {
+                continue;
+            }
+
+            Vector2 randomCirclePosition = Random.insideUnitCircle * resetRadius;
+
+            Vector3 newPosition = new Vector3(
+                userTransform.position.x + randomCirclePosition.x,
+                cubesToReset[i].position.y,
+                userTransform.position.z + randomCirclePosition.y
+            );
+
+            cubesToReset[i].position = newPosition;
+        }
     }
 }
+
