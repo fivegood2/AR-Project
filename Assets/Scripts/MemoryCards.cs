@@ -35,7 +35,7 @@ public class MemoryCards : MonoBehaviour
             myAnimator = GetComponentInChildren<Animator>();
         }
 
-        memoryGame = FindFirstObjectByType<MemoryGame>();
+        memoryGame = GetComponentInParent<MemoryGame>();
     }
 
     //get reference to memory game script

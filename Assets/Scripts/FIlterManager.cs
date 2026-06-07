@@ -43,8 +43,11 @@ public class FilterManager : MonoBehaviour
 
     protected virtual void Start()
     {
+        if (passthroughLayer == null) passthroughLayer = UnityEngine.Object.FindAnyObjectByType<OVRPassthroughLayer>();
+        if (userTransform == null) userTransform = Camera.main?.transform;
+
         //first, randomize the cube starting locations
-        resetCubes();
+resetCubes();
         if (blueOnlyRenderer != null)
         {
             blueOnlyMaterial = blueOnlyRenderer.material;

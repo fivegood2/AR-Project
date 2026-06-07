@@ -38,18 +38,20 @@ namespace Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement
         private float _distanceFromController;
         private Pose? _environmentPose;
         private EnvironmentRaycastHitStatus _currentEnvHitStatus;
-        //private OVRCameraRig _cameraRig;
         
         public event Action OnFirstWallSnap;
         private bool _hasSnappedToWall = false;
 
-
-        private void Awake()
+        private void Start()
         {
-           // _cameraRig = Object.FindAnyObjectByType<OVRCameraRig>();
-        }
+            if (_centerEyeAnchor == null) _centerEyeAnchor = Camera.main?.transform;
+            if (_raycastAnchor == null) _raycastAnchor = GameObject.Find("RightControllerAnchor")?.transform ?? GameObject.Find("LeftControllerAnchor")?.transform;
+            if (_raycastManager == null) _raycastManager = UnityEngine.Object.FindAnyObjectByType<EnvironmentRaycastManager>();
 
-        private IEnumerator Start()
+            StartCoroutine(StartPlacementRoutine());
+}
+
+        private IEnumerator StartPlacementRoutine()
         {
             // Wait until headset starts tracking
             enabled = false;
@@ -61,11 +63,18 @@ namespace Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement
             enabled = true;
 
             // Place the panel in front of the user
-            var position = _centerEyeAnchor.position + _centerEyeAnchor.forward;
-            var forward = Vector3.ProjectOnPlane(_centerEyeAnchor.position - position, Vector3.up).normalized;
-            _panel.position = position;
-            _panel.rotation = Quaternion.LookRotation(forward);
+            if (_centerEyeAnchor != null)
+            {
+                var position = _centerEyeAnchor.position + _centerEyeAnchor.forward;
+                var forward = Vector3.ProjectOnPlane(_centerEyeAnchor.position - position, Vector3.up).normalized;
+                _panel.position = position;
+                _panel.rotation = Quaternion.LookRotation(forward);
+            }
 
+            if (_panelGlow != null)
+            {
+                _panelGlow.SetActive(true); // Ensure it starts visible
+            }
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -90,7 +99,6 @@ namespace Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement
                 UpdateTargetPose();
                 if (OVRInput.GetUp(_grabButton))
                 {
-                    _panelGlow.SetActive(false);
                     _isGrabbing = false;
                     _environmentPose = null;
                 }
@@ -104,9 +112,9 @@ namespace Meta.XR.MRUtilityKitSamples.EnvironmentPanelPlacement
                 panelScale = Mathf.Clamp(panelScale, 0.2f, 1.5f);
                 _panel.localScale = new Vector3(panelScale, panelScale * _panelAspectRatio, 1f);
 
-                // Detect grab gesture and update grab indicator
+                // Detect grab gesture
                 bool didHitPanel = Physics.Raycast(GetRaycastRay(), out var hit) && hit.transform == _panel;
-                _panelGlow.SetActive(didHitPanel);
+                // Panel glow is now always visible as per user request, but we still check for grab
                 if (didHitPanel && OVRInput.GetDown(_grabButton))
                 {
                     _isGrabbing = true;

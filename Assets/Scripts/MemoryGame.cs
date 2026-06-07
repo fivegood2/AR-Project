@@ -33,6 +33,9 @@ public class MemoryGame : MonoBehaviour
         if (audioSource == null) audioSource = GetComponent<AudioSource>();
         if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
 
+        if (_panelPlacement == null) _panelPlacement = GetComponentInParent<EnvironmentPanelPlacement>();
+        if (_gameUI == null) _gameUI = GetComponentInChildren<MemoryGameUI>();
+
         _initialCardCount = cardsList.Count;
 
         foreach (MemoryCards card in cardsList)
@@ -46,7 +49,15 @@ public class MemoryGame : MonoBehaviour
         }
 
         // Wait for wall snap instead of starting immediately
-        _panelPlacement.OnFirstWallSnap += HandleFirstWallSnap;
+        if (_panelPlacement != null)
+        {
+            _panelPlacement.OnFirstWallSnap += HandleFirstWallSnap;
+        }
+        else
+        {
+            // If no placement logic, maybe start immediately or log warning
+            Debug.LogWarning("No EnvironmentPanelPlacement found. Memory Game will not start waiting for wall snap.");
+        }
     }
 
     private void PlaySound(AudioClip clip)
