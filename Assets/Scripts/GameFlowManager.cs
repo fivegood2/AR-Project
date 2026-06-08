@@ -10,6 +10,13 @@ public class GameFlowManager : MonoBehaviour
 {
     public enum Phase { Intro, Navigate, AtAhaPoint, Answering, Result }
 
+    /// <summary>
+    /// 퍼즐 정답을 맞췄을 때 1회 발생하는 전역 이벤트.
+    /// 팀의 CaptchaManager가 이 이벤트를 구독해 다음 퍼즐 진행 등을 트리거한다.
+    /// (Self-Sufficiency: 이 스크립트는 CaptchaManager를 직접 참조하지 않는다)
+    /// </summary>
+    public static event System.Action OnPuzzleCompleted;
+
     [Header("Phase (Read-Only)")]
     [SerializeField] private Phase _phase = Phase.Intro;
 
@@ -55,6 +62,7 @@ public class GameFlowManager : MonoBehaviour
     private float           _answerTimer;
     private Vector3         _resultPanelPos;
     private Quaternion      _resultPanelRot = Quaternion.identity;
+    private Transform       _centerEyeAnchor; // 런타임에 OVRCameraRig에서 찾아 캐시 (씬 직접 참조 금지)
 
     // ── Lifecycle ──────────────────────────────────────────────────
     void Start()
@@ -212,6 +220,7 @@ void OnAnswerSelected(string selected)
         {
             ShowResultPanel(successPanel);
             Debug.Log("[GameFlow] CORRECT!");
+            OnPuzzleCompleted?.Invoke();
         }
         else
         {
@@ -264,4 +273,42 @@ void OnTimerExpired()
     }
 
     void SetGO(GameObject go, bool active) { if (go != null) go.SetActive(active); }
+
+
+void Awake()
+    {
+        // ── 자가 캘리브레이션 (Self-Calibration) ──────────────────────
+        // 이 퍼즐은 다른 씬/프로젝트의 PuzzleSpawner가 임의의 위치·방향으로
+        // 스폰할 수 있으므로, 씬에 의존하지 않고 스스로 자리를 잡아야 한다.
+        //
+        // 1) OVRCameraRig는 이름이 아니라 '컴포넌트 타입'으로 찾는다.
+        //    (이 씬의 "[BuildingBlock] Camera Rig"라는 이름은 다른 프로젝트엔 없을 수 있음)
+        var rig = FindObjectOfType<OVRCameraRig>();
+        if (rig != null)
+        {
+            _centerEyeAnchor = rig.centerEyeAnchor;
+
+            // 2) 스폰 위치 보정: PuzzleSpawner는 '플레이어 눈높이' 기준으로 배치하지만
+            //    우리 퍼즐의 마커/메시는 모두 '바닥(Y=0 상대)' 기준으로 제작되어 있다.
+            //    XZ와 회전(스포너가 정한 "플레이어를 바라보는 방향")은 그대로 둔 채,
+            //    Y만 Rig의 바닥 기준 높이로 1회 스냅한다. (매 프레임 X — 드리프트 방지)
+            Transform root = transform.root; // 프리팹화 시 Root가 별도 오브젝트일 수 있으므로 root 사용
+            Vector3 pos = root.position;
+            pos.y = rig.transform.position.y;
+            root.position = pos;
+
+            Debug.Log($"[GameFlow] Self-calibrated. Root snapped to floor Y={pos.y:F2} (rig='{rig.name}')");
+        }
+        else
+        {
+            Debug.LogWarning("[GameFlow] OVRCameraRig not found — skipping self-calibration (Editor preview?).");
+        }
+
+        // 3) AhaPointTrigger의 userHead를 인스펙터 고정 참조 대신 런타임 캐시로 덮어쓴다.
+        if (_centerEyeAnchor != null)
+        {
+            foreach (var trig in GetComponentsInChildren<AhaPointTrigger>(true))
+                trig.userHead = _centerEyeAnchor;
+        }
+    }
 }
